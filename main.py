@@ -24,12 +24,11 @@ class PaymentInfo:
     federal_tax_amount: str
 
 
-def on_click(payment_info, settle_date):
-    login_link = 'http://127.0.0.1:5500/'
-    driver = webdriver.Chrome()
-    driver.get(login_link)
-
+def on_click(driver, payment_info, settle_date):
     try:
+        print(payment_info.ein[:2], payment_info.ein[2:])
+        print(payment_info.pin)
+        print(payment_info.internet_password)
         ein1_input = driver.find_element(by=By.NAME, value="EIN1")
         ein2_input = driver.find_element(by=By.NAME, value="EIN2")
 
@@ -42,7 +41,7 @@ def on_click(payment_info, settle_date):
         internet_password_input = driver.find_element(by=By.NAME, value="password")
         internet_password_input.send_keys(payment_info.internet_password)
 
-        login_button = driver.find_element(by=By.NAME, value="Login")
+        login_button = driver.find_element(by=By.CLASS_NAME, value="css_button")
         login_button.click()
         # Delay to make sure the elements are loaded before we try to interact with them
         driver.implicitly_wait(5)
@@ -53,6 +52,7 @@ def on_click(payment_info, settle_date):
 
         taxform_input = driver.find_element(by=By.ID, value="TaxForm_EditField")
         taxform_input.send_keys("941")
+        driver.implicitly_wait(5)
 
         next_button = driver.find_element(by=By.NAME, value="_eventId_next")
         next_button.click()
@@ -94,14 +94,17 @@ def on_click(payment_info, settle_date):
         driver.implicitly_wait(5)
     except:
         print("error")
-        driver.quit()
-        exit()
+        # driver.quit()
+        # exit()
         raise
 
     while True:
         pass
 
 def main():  
+    login_link = 'https://www.eftps.gov/eftps/login/loginInitial'
+    driver = webdriver.Chrome()
+    driver.get(login_link)
     # Seperate file with sensitive data
     sensitive_data = None
     with open('company_data.json', 'r') as file:
@@ -132,11 +135,20 @@ def main():
 
 
         payment_amount = ((df[df[2] == '941 Total'].values[0][-1]).replace(',', ''))
-        social_security_amount = ((df[df[2] == 'Social Security Wages'].values[0][-1]).replace(',', ''))
+        social_security_wages = ((df[df[2] == 'Social Security Wages'].values[0][-1]).replace(',', ''))
+        social_security_tips = 0
+        try :
+            social_security_tips = ((df[df[2] == 'Social Security Tips'].values[0][-1]).replace(',', ''))
+        except:
+            print('')
         medicare_amount = (df[df[2] == 'Medicare Wages & Tips'].values[0][-1]).replace(',', '')
         federal_tax_amount = (df[df[2] == 'Federal Income Tax'].values[0][-1]).replace(',', '')
 
-        if (float(social_security_amount) + float(medicare_amount) + float(federal_tax_amount)) != float(payment_amount):
+        if (float(social_security_wages) + float(social_security_tips) + float(medicare_amount) + float(federal_tax_amount)) != float(payment_amount):
+            print(float(social_security_wages))
+            print(float(medicare_amount))
+            print(float(federal_tax_amount))
+            print(float(payment_amount))
             print("Amounts don't match for company: ", company_name)
             exit()
         
@@ -148,7 +160,7 @@ def main():
             year=year,
             quarter=quarter,
             payment_amount=payment_amount,
-            social_security_amount=social_security_amount,
+            social_security_amount= str(float(social_security_wages) + float(social_security_tips)),
             medicare_amount=medicare_amount,
             federal_tax_amount=federal_tax_amount,
         )
@@ -169,7 +181,7 @@ def main():
             height=5,
             bg="gray",
             fg="black",
-            command=lambda pi=payment_info: on_click(pi, settle_entry.get())
+            command=lambda pi=payment_info: on_click(driver, pi, settle_entry.get())
         )
         button.pack()
 
