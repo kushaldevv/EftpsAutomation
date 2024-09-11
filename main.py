@@ -9,6 +9,7 @@ from datetime import datetime
 import tkinter as tk
 import os
 
+# source .venv/bin/activate
 @dataclass(frozen=True)
 class PaymentInfo:
     name: str
