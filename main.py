@@ -1,31 +1,46 @@
 import json
+import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
+from datetime import datetime
 
-login_link = 'http://127.0.0.1:5500/'
-driver = webdriver.Chrome()
-driver.get(login_link)
+# login_link = 'http://127.0.0.1:5500/'
+# driver = webdriver.Chrome()
+# driver.get(login_link)
+settle_date = '09/11/2024'
 
 # get this from the csv file for each company monthly report
-year = '2024'
-quarter = 'Q3'
-settle_date = '09/11/2024'
-payment_amount = '100.50'
-social_security_amount = '101.50'
-medicare_amount = '102.50'
-federal_tax_amount = '103.50'
-company_name = "AMS"
 
-with open('company_data.json', 'r') as file:
-    data = json.load(file)
+df = pd.read_csv('test.csv', header=None)
 
-company_details = data[company_name]
-ein = company_details['ein']
-pin = company_details['pin']
-internet_password = company_details['internet_password']
+company_name = df.iloc[0][0].split('\n')[0].strip()
 
-print(ein, pin, internet_password)
+date_range = df.iloc[1][0]
+start_date = datetime.strptime(date_range.split(' to ')[0], '%m/%d/%Y')
+year = start_date.year
+quarter = (start_date.month - 1) // 3 + 1
+
+
+payment_amount = ((df[df[2] == '941 Total'].values[0][-1]).replace(',', ''))
+social_security_amount = ((df[df[2] == 'Social Security Wages'].values[0][-1]).replace(',', ''))
+medicare_amount = (df[df[2] == 'Medicare Wages & Tips'].values[0][-1]).replace(',', '')
+federal_tax_amount = (df[df[2] == 'Federal Income Tax'].values[0][-1]).replace(',', '')
+
+if (float(social_security_amount) + float(medicare_amount) + float(federal_tax_amount)) != float(payment_amount):
+    print("Amounts don't match")
+    exit()
+
+# move this to top after we implement the for each csv file
+# with open('company_data.json', 'r') as file:
+#     data = json.load(file)
+
+# company_details = data[company_name]
+# ein = company_details['ein']
+# pin = company_details['pin']
+# internet_password = company_details['internet_password']
+
+# print(ein, pin, internet_password)
 # try:
 #     ein1_input = driver.find_element(by=By.NAME, value="EIN1")
 #     ein2_input = driver.find_element(by=By.NAME, value="EIN2")
